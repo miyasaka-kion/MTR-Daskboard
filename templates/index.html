@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTR Island Line Real-Time Map</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .map-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .station {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            position: relative;
+        }
+        .station-name {
+            margin-right: 40px;
+            width: 150px;
+            text-align: right;
+        }
+        .arrival-time {
+            font-weight: bold;
+            margin-left: 20px;
+        }
+        .line {
+            width: 4px;
+            height: 40px;
+            background-color: #0072ce;
+            position: absolute;
+            left: 179px;
+            top: 2px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            background-color: #0072ce;
+            border-radius: 50%;
+            position: absolute;
+            left: 175px;
+            top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>MTR Island Line Real-Time Map</h1>
+    <p>Arrival time of the next train at each station:</p>
+    <style>
+        .map-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+    </style>
+    <div class="map-container">
+    {% for station, sinf in zip(stations.items(), info) %}
+    {% set code, name = station %}
+    <div class="station">
+        <div class="station-name">{{ name }}</div>
+        <div class="dot"></div>
+        {% if not loop.last %}<div class="line"></div>{% endif %}
+        {% if 'isdelay' in sinf %}
+            <div class="arrival-time" id="{{ code }}_delay_time">Delay: {{ sinf['isdelay'] }}</div>
+        {% endif %}
+        {% if 'data' in sinf %}
+            {% for sta_key, data in sinf['data'].items() %}
+                {% if 'UP' in data %}
+                    <div class="arrival-time" id="{{ code }}_up_time">UP ETA: {{ data['UP'][0]['time_diff'] }}</div>
+                {% endif %}
+                {% if 'DOWN' in data %}
+                    <div class="arrival-time" id="{{ code }}_down_time">DOWN ETA: {{ data['DOWN'][0]['time_diff'] }}</div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="arrival-time" id="{{ code }}_time">No data available</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    </div>
+<!--    <script>-->
+<!--        async function updateRealTimeData() {-->
+<!--            const response = await fetch('/real_time_data');-->
+<!--            const data = await response.json();-->
+
+<!--            for (const [code, time] of Object.entries(data)) {-->
+<!--                document.getElementById(`${code}_time`).innerText = time;-->
+<!--            }-->
+<!--        }-->
+
+<!--        updateRealTimeData();-->
+<!--        setInterval(updateRealTimeData, 60000); // Update every minute-->
+<!--    </script>-->
+</body>
+</html>
