@@ -1,80 +1,55 @@
-from flask import Flask, render_template, jsonify
-import requests
-from datetime import datetime
+from flask import Flask, render_template
+from apscheduler.schedulers.background import BackgroundScheduler
+from station import *
 
 
-app = Flask(__name__)
+class Application:
+    def __init__(self):
+        self.app = Flask(__name__)
+        self.data_manager = DataManager()
+        self.setup_routes()
+        self.start_scheduler()
 
-station_names = {
-    "KET": "Kennedy Town",
-    "HKU": "HKU",
-    "SYP": "Sai Ying Pun",
-    "SHW": "Sheung Wan",
-    "CEN": "Central",
-    "ADM": "Admiralty",
-    "WAC": "Wan Chai",
-    "CAB": "Causeway Bay",
-    # "ISL": "Island Line",
-    "TIH": "Tin Hau",
-    "FOH": "Fortress Hill",
-    "NOP": "North Point",
-    "QUB": "Quarry Bay",
-    "TAK": "Tai Koo",
-    "SWH": "Sai Wan Ho",
-    "SKW": "Shau Kei Wan",
-    "HFC": "Heng Fa Chuen",
-    "CHW": "Chai Wan"
-}
+    def fetch_and_store_data(self):
+        print("Fetching and storing data...")
+        for sta_code in station_names.keys():
+            station = Station()
+            station.fetch_from_api(sta_code)
+            self.data_manager.store_station(station)
 
-# record the station info at a certain time
-class StationInfo:
-    pass
+    def start_scheduler(self):
+        scheduler = BackgroundScheduler()
+        interval = 30
+        scheduler.add_job(self.fetch_and_store_data, 'interval', seconds=interval)
+        print(f"Starting scheduler with interval of {interval} seconds.")
+        scheduler.start()
+    def setup_routes(self):
+        @self.app.route('/')
+        def index():
+            self.fetch_and_store_data()
+            station_dict = {}
+            station_codes = station_names.keys()
+            for code in station_codes:
+                recent_entries = self.data_manager.fetch_recent_entries(code, 10)
+                up_times = [entry.up_time for entry in recent_entries if entry.up_time] # this arr can be empty!!!!
+                down_times = [entry.down_time for entry in recent_entries if entry.down_time] # this arr can be empty!!!
+                is_delays = [entry.is_delay for entry in recent_entries if entry.is_delay]
+                station_dict[code] = {
+                    "up_times": up_times,
+                    "down_times": down_times,
+                    "is_delay": is_delays,
+                }
 
-def cal_time_diff(cur_time: str, sys_time: str) -> str:
-    current_time = datetime.strptime(sys_time, '%Y-%m-%d %H:%M:%S')
-    parsed_time = datetime.strptime(cur_time, '%Y-%m-%d %H:%M:%S')
-    time_difference = parsed_time - current_time
-    # if the time is minus set is as 0
-    if time_difference.days < 0:
-        return "0:00:00"
-    print("Time difference:", time_difference)
-    return str(time_difference)
+            return render_template(
+                'index.html',
+                stations_info=station_dict,
+                zip=zip
+            )
 
-def get_station_info() -> list:
-    url = "https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line={}&sta={}&lang={}"
-    line = "ISL"
-    lang = "en"
-    dataset = []
-    for s in station_names.keys():
-        # print(url.format(line, s, lang))
-        response = requests.get(url.format(line, s, lang))
-        data = response.json()
-        # print(data)
-        dataset.append(data)
-    return dataset
-
-
-@app.route('/')
-def index():
-    all_info = get_station_info()
-    for station in all_info:
-        if 'data' in station:
-            for sta_key, data in station['data'].items():
-                if 'sys_time' in data:
-                    sys_time = data['sys_time']
-                else:
-                    print("Fail to get sys_time")
-                    continue
-
-                if 'UP' in data:
-                    time = cal_time_diff(data['UP'][0]['time'], sys_time)
-                    data['UP'][0]['time_diff'] = cal_time_diff(data['UP'][0]['time'], sys_time)
-                if 'DOWN' in data:
-                    data['DOWN'][0]['time_diff'] = cal_time_diff(data['DOWN'][0]['time'], sys_time)
-    return render_template('index.html', stations=station_names, info=all_info, zip=zip)
+    def run(self, debug=True):
+        self.app.run(debug=debug)
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-
+    application = Application()
+    application.run()
