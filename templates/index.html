@@ -60,27 +60,25 @@
         }
     </style>
     <div class="map-container">
-    {% for station, sinf in zip(stations.items(), info) %}
-    {% set code, name = station %}
+    {% for code, sta_name in stations_names.items() %}
     <div class="station">
-        <div class="station-name">{{ name }}</div>
+        <div class="station-name">{{ sta_name }}</div>
         <div class="dot"></div>
         {% if not loop.last %}<div class="line"></div>{% endif %}
-        {% if 'isdelay' in sinf %}
-            <div class="arrival-time" id="{{ code }}_delay_time">Delay: {{ sinf['isdelay'] }}</div>
+        {% with info = stations_info[code] %}
+        {% if 'is_delay' in info %}
+            <div class="arrival-time" id="{{ code }}_delay_time">Delay: {{ info['is_delay'][0] }}</div>
         {% endif %}
-        {% if 'data' in sinf %}
-            {% for sta_key, data in sinf['data'].items() %}
-                {% if 'UP' in data %}
-                    <div class="arrival-time" id="{{ code }}_up_time">UP ETA: {{ data['UP'][0]['time_diff'] }}</div>
-                {% endif %}
-                {% if 'DOWN' in data %}
-                    <div class="arrival-time" id="{{ code }}_down_time">DOWN ETA: {{ data['DOWN'][0]['time_diff'] }}</div>
-                {% endif %}
-            {% endfor %}
-        {% else %}
-            <div class="arrival-time" id="{{ code }}_time">No data available</div>
+        {% if info['up_times'] %}
+            <div class="arrival-time" id="{{ code }}_up_time">UP ETA: {{ info['up_times'][0] }}</div>
         {% endif %}
+        {% if info['down_times'] %}
+            <div class="arrival-time" id="{{ code }}_down_time">DOWN ETA: {{ info['down_times'][0] }}</div>
+        {% endif %}
+        {% if not info['down_times'] and not info['up_times'] %}
+            <div class="arrival-time">No data</div>
+        {% endif %}
+        {% endwith %}
     </div>
     {% endfor %}
     </div>

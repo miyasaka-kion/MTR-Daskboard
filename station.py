@@ -42,7 +42,7 @@ def cal_time_diff(cur_time: str, sys_time: str) -> str:
     # if the time is minus set is as 0
     if time_difference.days < 0:
         return "0:00:00"
-    print("Time difference:", time_difference)
+    # print("Time difference:", time_difference)
     return str(time_difference)
 
 
